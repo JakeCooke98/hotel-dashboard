@@ -6,12 +6,12 @@ import {
   DialogHeader, 
   DialogTitle, 
   DialogFooter
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
+} from "./ui/dialog";
+import { useToast } from '../hooks/use-toast';
+import { Label } from './ui/label';
+import { Input } from './ui/input';
+import { Textarea } from './ui/textarea';
+import { Button } from './ui/button';
 
 interface CreateRoomDialogProps {
   isOpen: boolean;

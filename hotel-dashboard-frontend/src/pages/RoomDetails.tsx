@@ -2,23 +2,14 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Download, Plus, Trash } from 'lucide-react';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { 
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { useToast } from "@/hooks/use-toast";
-import Sidebar from '@/components/Sidebar';
-import { getRoom, updateRoom, deleteRoom } from '@/services/roomService';
-import { Room } from '@/types/room';
+import { Room } from '../types/room';
+import { useToast } from '../hooks/use-toast';
+import { deleteRoom, getRoom, updateRoom } from '../services/roomService';
+import { Sidebar } from '../components/ui/sidebar';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Textarea } from '../components/ui/textarea';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../components/ui/alert-dialog';
 
 const RoomDetails = () => {
   const { id } = useParams<{ id: string }>();

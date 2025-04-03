@@ -1,12 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
-import Sidebar from '@/components/Sidebar';
-import RoomTable from '@/components/RoomTable';
-import CreateRoomDialog from '@/components/CreateRoomDialog';
-import { getAllRooms, addRoom } from '@/services/roomService';
-import { Room } from '@/types/room';
+import { Room } from '../types/room';
+import { useToast } from '../components/ui/use-toast';
+import { addRoom, getAllRooms } from '../services/roomService';
+import { Sidebar } from '../components/ui/sidebar';
+import { Button } from '../components/ui/button';
+import RoomTable from '../components/RoomTable';
+import CreateRoomDialog from '../components/CreateRoomDialog';
 
 const Index = () => {
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -71,7 +71,7 @@ const Index = () => {
           
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-medium">All rooms</h2>
-            <Button 
+            <Button
               className="bg-hugo-red hover:bg-red-700"
               onClick={() => setIsCreateDialogOpen(true)}
             >
@@ -83,7 +83,7 @@ const Index = () => {
         </div>
       </div>
       
-      <CreateRoomDialog 
+      <CreateRoomDialog
         isOpen={isCreateDialogOpen} 
         onClose={() => setIsCreateDialogOpen(false)}
         onCreateRoom={handleCreateRoom}
