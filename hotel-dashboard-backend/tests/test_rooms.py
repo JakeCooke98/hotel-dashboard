@@ -3,6 +3,7 @@ from app.main import app
 from app.database import Base, engine
 import pytest
 
+# Create a global client instance - simplest approach
 client = TestClient(app)
 
 @pytest.fixture(scope="function")
