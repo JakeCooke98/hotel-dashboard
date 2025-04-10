@@ -60,6 +60,7 @@ const RoomDetails = () => {
           setIsLoading(false);
         } else {
           const roomData = await getRoom(id!);
+          console.log("Fetched room data:", roomData); // Log the data to see what's being returned
           setRoom(roomData);
           setName(roomData.name);
           setDescription(roomData.description);
@@ -124,6 +125,11 @@ const RoomDetails = () => {
 
   const handleSave = async () => {
     try {
+      // If there's a facility in the input field, add it first
+      if (facilityInput.trim()) {
+        handleAddFacility();
+      }
+      
       setIsSaving(true);
       
       if (isNewRoom) {
@@ -161,6 +167,7 @@ const RoomDetails = () => {
           name,
           description,
           facilityList: facilities,
+          facilities: facilities.length,
           image: image || undefined,
         });
         

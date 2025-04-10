@@ -84,7 +84,16 @@ export const getRoom = async (id: string): Promise<Room> => {
       throw new Error(`Room not found: ${response.status} ${response.statusText}`);
     }
     
-    return await response.json();
+    const roomData = await response.json();
+    
+    // Ensure facility_list is properly handled
+    if (!roomData.facilityList) {
+      roomData.facilityList = [];
+    }
+    
+    console.log("Room data from API:", roomData);
+    
+    return roomData;
   } catch (error) {
     console.error("Error fetching room:", error);
     toast.error("Failed to load room details. Please try again later.");

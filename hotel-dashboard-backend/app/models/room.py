@@ -16,6 +16,14 @@ class Room(Base):
     facility_list = Column(String, nullable=True)  # Stored as JSON string
 
     def to_dict(self):
+        # Safely parse facility_list
+        facility_list = []
+        if self.facility_list:
+            try:
+                facility_list = json.loads(self.facility_list)
+            except json.JSONDecodeError:
+                facility_list = []
+        
         return {
             "id": self.id,
             "name": self.name,
@@ -24,5 +32,5 @@ class Room(Base):
             "created": self.created.isoformat() if self.created else None,
             "updated": self.updated.isoformat() if self.updated else None,
             "image": self.image,
-            "facility_list": json.loads(self.facility_list) if self.facility_list else []
+            "facilityList": facility_list
         }

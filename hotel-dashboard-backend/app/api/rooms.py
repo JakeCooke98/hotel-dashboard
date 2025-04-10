@@ -22,7 +22,9 @@ def get_room(room_id: str, db: Session = Depends(get_db)):
     room = db.query(Room).filter(Room.id == room_id).first()
     if room is None:
         raise HTTPException(status_code=404, detail="Room not found")
-    return room.to_dict()
+    room_dict = room.to_dict()
+    print(f"Room data being returned: {room_dict}")
+    return room_dict
 
 @router.post("/rooms", response_model=RoomSchema)
 def create_room(room: RoomCreate, db: Session = Depends(get_db)):
