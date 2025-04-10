@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import Sidebar from '@/components/Sidebar';
 import { getRoom, updateRoom, deleteRoom, addRoom, generateRoomPDF } from '@/services/roomService';
 import { Room } from '@/types/room';
+import { formatDate } from '@/lib/utils';
 
 const RoomDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -431,11 +432,11 @@ const RoomDetails = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <div className="text-sm font-karla text-gray-500 mb-1">Created</div>
-                    <div className="font-karla">{room?.created || new Date().toLocaleDateString('en-GB')}</div>
+                    <div className="font-karla">{room?.created ? formatDate(room.created) : '-'}</div>
                   </div>
                   <div>
                     <div className="text-sm font-karla text-gray-500 mb-1">Updated</div>
-                    <div className="font-karla">{room?.updated || '-'}</div>
+                    <div className="font-karla">{room?.updated ? formatDate(room.updated) : '-'}</div>
                   </div>
                 </div>
               </div>
