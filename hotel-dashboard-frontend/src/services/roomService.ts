@@ -1,7 +1,7 @@
 import { Room } from "../types/room";
 import { toast } from "sonner";
 
-const API_URL = "http://localhost:8000";
+const API_URL = "http://localhost:8000/api/v1";
 
 // Service to get all rooms
 export const getAllRooms = async (): Promise<Room[]> => {
