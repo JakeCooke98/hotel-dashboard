@@ -1,7 +1,7 @@
-
 import React from 'react';
 import { Room } from '../types/room';
 import { useNavigate } from 'react-router-dom';
+import { formatDate } from '@/lib/utils';
 import {
   Table,
   TableBody,
@@ -49,8 +49,8 @@ const RoomTable: React.FC<RoomTableProps> = ({ rooms, isLoading }) => {
               <TableCell className="font-medium">{room.name}</TableCell>
               <TableCell>{room.description}</TableCell>
               <TableCell className="text-center">{room.facilities}</TableCell>
-              <TableCell className="text-center">{room.created}</TableCell>
-              <TableCell className="text-center">{room.updated || '-'}</TableCell>
+              <TableCell className="text-center">{formatDate(room.created)}</TableCell>
+              <TableCell className="text-center">{room.updated ? formatDate(room.updated) : '-'}</TableCell>
             </TableRow>
           ))}
         </TableBody>

@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# Simple command runner for the FastAPI application
+
+if [ "$1" == "dev" ]; then
+    python run.py
+elif [ "$1" == "test" ]; then
+    pytest
+else
+    echo "Usage: ./fastapi [command]"
+    echo "Available commands:"
+    echo "  dev   - Run the development server"
+    echo "  test  - Run tests"
+fi 

@@ -7,11 +7,11 @@ A full-stack application for managing hotel rooms with a FastAPI backend and Rea
 ### Backend (Python/FastAPI)
 - Built with FastAPI for high-performance API endpoints
 - Implements a clean architecture pattern with:
-  - Routes (`app/api/routes`)
+  - API routes (`app/api`)
   - Services (`app/services`)
-  - Repositories (`app/repositories`)
-  - Models (`app/models` and `app/db/models`)
-- PostgreSQL database with SQLAlchemy ORM
+  - Models (`app/models`)
+  - Schemas (`app/schemas`)
+- SQLite database with SQLAlchemy ORM
 - PDF generation service for room reports
 - CORS enabled for local development
 
@@ -29,35 +29,28 @@ A full-stack application for managing hotel rooms with a FastAPI backend and Rea
 ### Prerequisites
 - Python 3.8+
 - Node.js 16+
-- PostgreSQL
 
 ### Backend Setup
 
 1. Create and activate a virtual environment:
 ```bash
+cd hotel-dashboard-backend
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
 2. Install dependencies:
 ```bash
-cd hotel-dashboard-backend
 pip install -r requirements.txt
 ```
 
-3. Set up your PostgreSQL database and update the connection string in `.env`:
+3. Start the backend server:
 ```bash
-DATABASE_URL=postgresql://postgres:password@localhost:5432/hugohotel
+./fastapi dev
 ```
-
-4. Initialize the database:
+or
 ```bash
-python app/db/init_db.py
-```
-
-5. Start the backend server:
-```bash
-uvicorn app.main:app --reload --port 8000
+python run.py
 ```
 
 The API will be available at `http://localhost:8000` with Swagger docs at `/docs`.
@@ -75,8 +68,7 @@ npm install
 npm run dev
 ```
 
-The frontend will be available at `http://localhost:3000`.
-
+The frontend will be available at `http://localhost:3000`
 
 ## 🔑 Key Features
 
@@ -111,38 +103,32 @@ The frontend will be available at `http://localhost:3000`.
    - Customizable design system
    - Consistent UI patterns
 
-4. **Repository Pattern**
-   - Separation of concerns
-   - Easier testing
-   - Maintainable code structure
+4. **SQLite Database**
+   - Simple setup with no additional services required
+   - Perfect for development and testing
+   - File-based persistence
 
 ## 📝 API Endpoints
 
-- `GET /api/rooms` - Get all rooms
-- `POST /api/rooms` - Create a new room
-- `GET /api/rooms/{room_id}` - Get room details
-- `PUT /api/rooms/{room_id}` - Update room
-- `DELETE /api/rooms/{room_id}` - Delete room
-- `GET /api/rooms/{room_id}/pdf` - Generate room PDF report
+- `GET /api/v1/rooms` - Get all rooms
+- `POST /api/v1/rooms` - Create a new room
+- `GET /api/v1/rooms/{room_id}` - Get room details
+- `PUT /api/v1/rooms/{room_id}` - Update room
+- `DELETE /api/v1/rooms/{room_id}` - Delete room
+- `GET /api/v1/rooms/{room_id}/pdf` - Generate room PDF report
 
 ## 🧪 Testing
 
 Run backend tests:
 ```bash
 cd hotel-dashboard-backend
+./fastapi test
+```
+or
+```bash
+cd hotel-dashboard-backend
 pytest
 ```
-
-Run frontend tests:
-```bash
-cd hotel-dashboard-frontend
-npm test
-```
-
-## 🔒 Environment Variables
-
-### Backend
-- `DATABASE_URL`: PostgreSQL connection string
 
 ### Frontend
 - Default API URL is configured to `http://localhost:8000`

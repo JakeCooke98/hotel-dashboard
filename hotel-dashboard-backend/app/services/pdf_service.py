@@ -1,197 +1,208 @@
-
-from datetime import datetime
-from io import BytesIO
-import requests
-from reportlab.lib import colors
+from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
-from app.models.room import Room
+from reportlab.lib.colors import Color, black, white
+from reportlab.lib.units import inch
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.lib.utils import ImageReader
+from reportlab.lib.fonts import addMapping
+from io import BytesIO
+import datetime
+import requests
+import os
+import base64
+import logging
 
-class PDFService:
-    def __init__(self):
-        self.styles = getSampleStyleSheet()
-        self._setup_styles()
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-    def _setup_styles(self):
-        """Initialize custom styles for the PDF"""
-        self.title_style = ParagraphStyle(
-            name='TitleStyle', 
-            parent=self.styles['Heading1'],
-            fontSize=28,
-            spaceAfter=12,
-            spaceBefore=20,
-        )
-        
-        self.description_style = ParagraphStyle(
-            name='DescriptionStyle', 
-            parent=self.styles['Normal'],
-            fontSize=14,
-            leading=18,
-            spaceBefore=0,
-            spaceAfter=20
-        )
-        
-        self.heading_style = ParagraphStyle(
-            name='HeadingStyle', 
-            parent=self.styles['Heading2'],
-            fontSize=18,
-            spaceBefore=20,
-            spaceAfter=12
-        )
-        
-        self.facility_style = ParagraphStyle(
-            name='FacilityStyle', 
-            parent=self.styles['Normal'],
-            fontSize=12,
-            leading=16,
-            leftIndent=10
-        )
-        
-        self.footer_style = ParagraphStyle(
-            name='FooterStyle', 
-            parent=self.styles['Normal'],
-            fontSize=9,
-            textColor=colors.gray
-        )
+# Get the absolute path to the static directory
+current_dir = os.path.dirname(os.path.abspath(__file__))
+app_dir = os.path.dirname(os.path.dirname(current_dir))
+static_dir = os.path.join(app_dir, 'static')
+logo_path = os.path.join(static_dir, 'logo.png')
+fonts_dir = os.path.join(static_dir, 'fonts')
 
-    def _create_header(self):
-        """Create the PDF header with logo"""
-        header_data = [[
-            Paragraph(
-                '''
-                <para align="center" spaceBefore="0">
-                <font size="14" color="white">
-                <b>THE<br/>HUGO</b>
-                <br/><font size="8">GARY LANE</font>
-                </font>
-                </para>
-                ''', 
-                self.styles["Normal"]
-            )
-        ]]
-        
-        header_table = Table(header_data, colWidths=[500], rowHeights=50)
-        header_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, -1), colors.gray),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ]))
-        return header_table
+logger.info(f"Logo path: {logo_path}")
+logger.info(f"Fonts directory: {fonts_dir}")
 
-    def _create_facilities_table(self, facilities):
-        """Create a two-column table for facilities"""
-        facilities_data = []
-        row = []
+# Register fonts
+try:
+    karla_regular = os.path.join(fonts_dir, 'Karla-Regular.ttf')
+    karla_bold = os.path.join(fonts_dir, 'Karla-Bold.ttf')
+    merriweather_regular = os.path.join(fonts_dir, 'Merriweather-Regular.ttf')
+    merriweather_bold = os.path.join(fonts_dir, 'Merriweather-Bold.ttf')
+    
+    pdfmetrics.registerFont(TTFont('Karla', karla_regular))
+    pdfmetrics.registerFont(TTFont('Karla-Bold', karla_bold))
+    pdfmetrics.registerFont(TTFont('Merriweather', merriweather_regular))
+    pdfmetrics.registerFont(TTFont('Merriweather-Bold', merriweather_bold))
+    
+    logger.info("Custom fonts registered successfully")
+except Exception as e:
+    logger.error(f"Error registering fonts: {e}")
+
+def download_image(url):
+    """Download image from URL or process Base64 data URI"""
+    if not url:
+        return None
         
-        # Default facilities if none provided
-        default_facilities = [
-            "Nespresso System", "E-Concierge", "All-night checkin",
-            "Luxury Amenities", "Temple Spa toiletries", "Towels and linen"
-        ]
-        
-        # Use provided facilities or defaults if empty
-        all_facilities = facilities if facilities else default_facilities
-        
-        for i, facility in enumerate(all_facilities):
-            bullet_item = Paragraph(f"• {facility}", self.facility_style)
-            row.append(bullet_item)
-            
-            if len(row) == 2 or i == len(all_facilities) - 1:
-                if len(row) == 1:
-                    row.append(Paragraph("", self.facility_style))
-                facilities_data.append(row)
-                row = []
-        
-        if facilities_data:
-            table = Table(facilities_data, colWidths=[250, 250])
-            table.setStyle(TableStyle([
-                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ]))
-            return table
+    # Handle base64 encoded images (data URIs)
+    if url.startswith('data:image'):
+        try:
+            # Extract the base64 part
+            base64_data = url.split(',')[1]
+            return BytesIO(base64.b64decode(base64_data))
+        except Exception as e:
+            logger.error(f"Error processing base64 image: {e}")
+            return None
+    
+    # Handle URL images
+    try:
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            return BytesIO(response.content)
+        logger.error(f"Failed to download image: HTTP {response.status_code}")
+        return None
+    except Exception as e:
+        logger.error(f"Error downloading image: {e}")
         return None
 
-    def generate_room_pdf(self, room: Room) -> bytes:
-        """Generate a PDF for a room"""
-        buffer = BytesIO()
+def generate_room_pdf(room_data: dict) -> BytesIO:
+    buffer = BytesIO()
+    width, height = letter  # 8.5 x 11 inches
+    p = canvas.Canvas(buffer, pagesize=letter)
+    
+    # Color definitions
+    dark_gray = Color(0.2, 0.2, 0.2)
+    light_gray = Color(0.9, 0.9, 0.9)
+    
+    # Header - dark background
+    p.setFillColor(dark_gray)
+    p.rect(0, height - 1.5*inch, width, 1.5*inch, fill=1)
+    
+    # Add hotel logo in the header
+    p.setFillColor(white)
+    
+    # Try to load and draw the PNG logo
+    try:
+        if os.path.exists(logo_path):
+            # Calculate logo dimensions (about 2 inches wide)
+            logo_width = 2*inch
+            logo_height = 0.9*inch  # Adjust as needed based on your logo's aspect ratio
+            
+            # Position the logo in the header
+            logo_x = 0.5*inch
+            logo_y = height - 1.2*inch  # Centered vertically in the header
+            
+            # Draw the logo
+            p.drawImage(logo_path, logo_x, logo_y, width=logo_width, height=logo_height, preserveAspectRatio=True)
+            logger.info("PNG logo drawn successfully")
+        else:
+            # Fallback to text if logo file doesn't exist
+            logger.warning(f"Logo file not found at {logo_path}. Using text fallback.")
+            fallback_to_text = True
+    except Exception as e:
+        logger.error(f"Error drawing PNG logo: {e}")
+        fallback_to_text = True
+    
+    # Fallback to text-based header if needed
+    if 'fallback_to_text' in locals() and fallback_to_text:
+        # Using the custom Karla-Bold font for the header
+        p.setFont("Karla-Bold", 36)
         
-        doc = SimpleDocTemplate(
-            buffer,
-            pagesize=letter,
-            leftMargin=30,
-            rightMargin=30,
-            topMargin=30,
-            bottomMargin=30
-        )
+        # Draw hotel name
+        p.drawString(0.5*inch, height - 0.85*inch, "HUGO")
         
-        elements = []
-        
-        # Add export header
-        elements.append(Paragraph(
-            '<para align="right" spaceBefore="0"><font size="12" color="#A0A0A0">PDF Export</font></para>',
-            self.styles["Normal"]
-        ))
-        
-        # Add hotel header
-        elements.append(self._create_header())
-        elements.append(Spacer(1, 30))
-        
-        # Room details
-        elements.append(Paragraph(room.name, self.title_style))
-        elements.append(Paragraph(room.description, self.description_style))
-        
-        # Room image
-        if room.image:
+        # Draw "HOTEL GROUP" below in smaller text
+        p.setFont("Karla", 14)
+        p.drawString(0.5*inch, height - 1.1*inch, "HOTEL GROUP")
+    
+    # Room title - use bold font
+    p.setFillColor(black)
+    p.setFont("Karla", 28)
+    
+    title = room_data.get('name', 'Deluxe Suite')
+    p.drawString(0.5*inch, height - 2.5*inch, title)
+    
+    # Room description
+    p.setFillColor(black)
+    p.setFont("Merriweather", 14)  # Using Merriweather for description
+    
+    description = room_data.get('description', 'A spacious suite with ocean view')
+    # Wrap description if it's too long
+    description_width = width - inch  # Available width
+    if p.stringWidth(description, "Merriweather", 14) > description_width:
+        # Simple truncation with ellipsis
+        while p.stringWidth(description + "...", "Merriweather", 14) > description_width and len(description) > 0:
+            description = description[:-1]
+        description += "..."
+    p.drawString(0.5*inch, height - 3.1*inch, description)
+    
+    # Add room image
+    image_url = room_data.get('image')
+    if image_url:
+        img_data = download_image(image_url)
+        if img_data:
             try:
-                # Handle base64 encoded images
-                if room.image.startswith('data:image'):
-                    import base64
-                    # Extract the base64 encoded data
-                    encoded_data = room.image.split(',')[1]
-                    img_data = base64.b64decode(encoded_data)
-                    img = Image(BytesIO(img_data), width=500, height=300)
-                    img.hAlign = 'CENTER'
-                    elements.append(img)
-                else:
-                    # Handle URL images
-                    response = requests.get(room.image)
-                    if response.status_code == 200:
-                        img = Image(BytesIO(response.content), width=500, height=300)
-                        img.hAlign = 'CENTER'
-                        elements.append(img)
+                img = ImageReader(img_data)
+                # Draw image maintaining aspect ratio
+                img_width = width - inch
+                img_height = 3.5*inch
+                p.drawImage(img, 0.5*inch, height - 7*inch, width=img_width, height=img_height, preserveAspectRatio=True)
             except Exception as e:
-                print(f"Failed to add image to PDF: {e}")
+                logger.error(f"Error drawing image: {e}")
+    
+    # Facilities section
+    p.setFillColor(black)
+    p.setFont("Karla-Bold", 18)
+    
+    p.drawString(0.5*inch, height - 7.5*inch, "Facilities")
+    
+    # Draw facility list in two columns
+    if room_data.get('facilityList'):
+        facilities = room_data['facilityList']
+        # Split facilities into two columns
+        mid_point = (len(facilities) + 1) // 2
+        left_facilities = facilities[:mid_point]
+        right_facilities = facilities[mid_point:]
         
-        elements.append(Spacer(1, 20))
+        # Left column
+        y_pos = height - 8*inch
+        p.setFont("Merriweather", 12)
         
-        # Facilities section
-        if hasattr(room, 'facilityList') and room.facilityList:
-            elements.append(Paragraph("Facilities", self.heading_style))
-            facilities_table = self._create_facilities_table(room.facilityList)
-            if facilities_table:
-                elements.append(facilities_table)
+        for facility in left_facilities:
+            p.drawString(0.7*inch, y_pos, "•")
+            p.drawString(0.9*inch, y_pos, facility)
+            y_pos -= 0.4*inch
         
-        elements.append(Spacer(1, 40))
-        
-        # Footer
-        footer_data = [[
-            Paragraph(f"© The Hugo {datetime.now().year}", self.footer_style),
-            Paragraph(f"{datetime.now().strftime('%d/%m/%y')}", self.footer_style),
-        ]]
-        
-        footer_table = Table(footer_data, colWidths=[250, 250])
-        footer_table.setStyle(TableStyle([
-            ('ALIGN', (0, 0), (0, 0), 'LEFT'),
-            ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ]))
-        elements.append(footer_table)
-        
-        # Build PDF
-        doc.build(elements)
-        
-        pdf_value = buffer.getvalue()
-        buffer.close()
-        
-        return pdf_value
+        # Right column (starts at middle of page)
+        y_pos = height - 8*inch
+        for facility in right_facilities:
+            p.drawString(4*inch, y_pos, "•")
+            p.drawString(4.2*inch, y_pos, facility)
+            y_pos -= 0.4*inch
+    
+    # Footer - make it taller to better fit text
+    p.setFillColor(light_gray)
+    # Increase height for better text coverage
+    p.rect(0, 0.4*inch, width, 0.4*inch, fill=1)
+    p.setFillColor(dark_gray)
+    
+    p.setFont("Karla", 9)
+    
+    # Copyright - Adjust y position to center vertically in the footer bar
+    footer_center_y = 0.6*inch  # Middle of the footer bar (0.4*inch + 0.2*inch)
+    
+    # Copyright
+    current_year = datetime.datetime.now().year
+    p.drawString(0.5*inch, footer_center_y, f"© The Hugo {current_year}")
+    
+    # Date on right side
+    today = datetime.datetime.now().strftime("%d/%m/%y")
+    p.drawRightString(width - 0.5*inch, footer_center_y, today)
+    
+    p.save()
+    buffer.seek(0)
+    return buffer

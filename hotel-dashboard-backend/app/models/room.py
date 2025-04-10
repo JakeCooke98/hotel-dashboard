@@ -1,22 +1,36 @@
+from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy.sql import func
+from ..database import Base
+import json
 
-from pydantic import BaseModel, Field
-from typing import Optional, List
-from datetime import datetime
+class Room(Base):
+    __tablename__ = "rooms"
 
-class RoomBase(BaseModel):
-    name: str = Field(..., example="No. 3 Luxury Double Room")
-    description: str = Field(..., example="Style and beauty with double bed, walk-in shower and daily servicing.")
-    facilityList: List[str] = Field(default_factory=list)
-    image: Optional[str] = None
-    facilities: int = Field(..., example=3)
-    created: str = Field(..., example="17/03/25")
-    updated: Optional[str] = None
+    id = Column(String, primary_key=True, index=True)
+    name = Column(String, index=True)
+    description = Column(String)
+    facilities = Column(Integer)
+    created = Column(DateTime(timezone=True), server_default=func.now())
+    updated = Column(DateTime(timezone=True), nullable=True)
+    image = Column(String, nullable=True)
+    facility_list = Column(String, nullable=True)  # Stored as JSON string
 
-class RoomCreate(RoomBase):
-    pass
-
-class Room(RoomBase):
-    id: str
-
-    class Config:
-        from_attributes = True
+    def to_dict(self):
+        # Safely parse facility_list
+        facility_list = []
+        if self.facility_list:
+            try:
+                facility_list = json.loads(self.facility_list)
+            except json.JSONDecodeError:
+                facility_list = []
+        
+        return {
+            "id": self.id,
+            "name": self.name,
+            "description": self.description,
+            "facilities": self.facilities,
+            "created": self.created.isoformat() if self.created else None,
+            "updated": self.updated.isoformat() if self.updated else None,
+            "image": self.image,
+            "facilityList": facility_list
+        }
